@@ -1,0 +1,122 @@
+#include <map>
+#include <set>
+#include <list>
+#include <cmath>
+#include <ctime>
+#include <deque>
+#include <queue>
+#include <stack>
+#include <string>
+#include <bitset>
+#include <cstdio>
+#include <limits>
+#include <vector>
+#include <climits>
+#include <cstring>
+#include <cstdlib>
+#include <fstream>
+#include <numeric>
+#include <sstream>
+#include <iostream>
+#include <algorithm>
+#include <unordered_map>
+
+using namespace std;
+
+struct ZoneCount {
+    string zone;
+    int count;
+};
+
+struct SlotCount {
+    string zone;
+    int hour;
+    int count;
+};
+
+class TripAnalyzer {
+private:
+    unordered_map<string, int> zone_totals;
+    unordered_map<string, int> slot_totals;
+
+public:
+    void ingestStdin() {
+        ios_base::sync_with_stdio(false);
+        cin.tie(NULL);
+
+        string line;
+        while (getline(cin, line)) {
+            if (line.empty()) continue;
+
+            stringstream ss(line);
+            string field;
+            vector<string> tokens;
+
+            while (getline(ss, field, ',')) {
+                tokens.push_back(field);
+            }
+
+            if (tokens.size() < 4) continue;
+
+            string pickup_zone = tokens[1];
+            string pickup_time = tokens[3];
+
+            if (pickup_time.length() >= 13) {
+                int hour = stoi(pickup_time.substr(11, 2));
+
+                zone_totals[pickup_zone]++;
+
+                string slot_key = pickup_zone + ":" + to_string(hour);
+                slot_totals[slot_key]++;
+            }
+        }
+    }
+
+    vector<ZoneCount> topZones() {
+        vector<ZoneCount> results;
+        for (auto const& [zone, count] : zone_totals) {
+            results.push_back({zone, count});
+        }
+
+        sort(results.begin(), results.end(), [](const ZoneCount& a, const ZoneCount& b) {
+            if (a.count != b.count) return a.count > b.count;
+            return a.zone < b.zone;
+        });
+
+        if (results.size() > 10) results.resize(10);
+        return results;
+    }
+
+    vector<SlotCount> topBusySlots() {
+        vector<SlotCount> results;
+        for (auto const& [key, count] : slot_totals) {
+            size_t pos = key.find(':');
+            string zone = key.substr(0, pos);
+            int hour = stoi(key.substr(pos + 1));
+            results.push_back({zone, hour, count});
+        }
+
+        sort(results.begin(), results.end(), [](const SlotCount& a, const SlotCount& b) {
+            if (a.count != b.count) return a.count > b.count;
+            if (a.zone != b.zone) return a.zone < b.zone;
+            return a.hour < b.hour;
+        });
+
+        if (results.size() > 10) results.resize(10);
+        return results;
+    }
+};
+int main() {
+    TripAnalyzer analyzer;
+    analyzer.ingestStdin();
+
+    cout << "TOP_ZONES\n";
+    for (auto& z : analyzer.topZones())
+        cout << z.zone << "," << z.count << "\n";
+
+    cout << "TOP_SLOTS\n";
+    for (auto& s : analyzer.topBusySlots())
+        cout << s.zone << "," << s.hour << "," << s.count << "\n";
+
+    return 0;
+}
